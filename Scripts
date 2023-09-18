@@ -1,0 +1,131 @@
+-- ==============================
+-- AGGREGATIONS
+-- ==============================
+
+-- Total estimated and actual costs by project
+SELECT Project_Name, SUM(Estimated_Cost) AS Total_Estimated, SUM(Actual_Cost) AS Total_Actual 
+FROM cost_estimation 
+GROUP BY Project_Name;
+
+-- Average cost variance by project manager
+SELECT Project_Manager, AVG(Variance) AS Avg_Variance 
+FROM cost_estimation 
+GROUP BY Project_Manager;
+
+-- Total costs by cost category
+SELECT Cost_Category, SUM(Actual_Cost) AS Total_Actual 
+FROM cost_estimation 
+GROUP BY Cost_Category;
+
+-- ==============================
+-- SORTING AND RANKING
+-- ==============================
+
+-- Rank projects by their total estimated costs
+SELECT Project_Name, SUM(Estimated_Cost) AS Total_Estimated, 
+       RANK() OVER (ORDER BY SUM(Estimated_Cost) DESC) AS Rank 
+FROM cost_estimation 
+GROUP BY Project_Name;
+
+-- Sort materials by their average actual cost
+SELECT Item AS Material, AVG(Actual_Cost) AS Average_Actual 
+FROM cost_estimation 
+WHERE Cost_Category = 'Materials' 
+GROUP BY Item 
+ORDER BY Average_Actual DESC;
+
+-- ==============================
+-- FILTERING
+-- ==============================
+
+-- Select projects that have a variance greater than a certain threshold
+SELECT DISTINCT Project_Name 
+FROM cost_estimation 
+WHERE Variance > 5000;
+
+-- Filter out projects that started within a specific time frame
+SELECT DISTINCT Project_Name 
+FROM cost_estimation 
+WHERE Start_Date NOT BETWEEN '01/01/2023' AND '31/01/2023';
+
+-- ==============================
+-- JOINING
+-- ==============================
+
+-- Join the dataset with project_details for more details about each project
+SELECT a.*, b.Additional_Detail_Column 
+FROM cost_estimation a 
+JOIN project_details b ON a.Project_ID = b.Project_ID;
+
+-- ==============================
+-- TRANSFORMATION
+-- ==============================
+
+-- Calculate the percentage of the estimated cost to the actual cost for each row
+SELECT *, (Actual_Cost / Estimated_Cost) * 100 AS Percentage_Actual_To_Estimated 
+FROM cost_estimation;
+
+-- Categorize variances
+SELECT *, 
+       CASE 
+           WHEN Variance < 0 THEN 'Under Budget' 
+           WHEN Variance = 0 THEN 'On Budget' 
+           ELSE 'Over Budget' 
+       END AS Budget_Status 
+FROM cost_estimation;
+
+-- ==============================
+-- DATA CLEANING
+-- ==============================
+
+-- Replace any null values with default values
+UPDATE cost_estimation 
+SET Actual_Cost = COALESCE(Actual_Cost, 0);
+
+-- ==============================
+-- GROUPING
+-- ==============================
+
+-- Group by project manager to analyze their respective projects
+SELECT Project_Manager, COUNT(DISTINCT Project_Name) AS Number_Of_Projects 
+FROM cost_estimation 
+GROUP BY Project_Manager;
+
+-- Group by month of project start date
+SELECT SUBSTR(Start_Date, 4, 2) AS Month, COUNT(DISTINCT Project_Name) AS Projects_Started 
+FROM cost_estimation 
+GROUP BY SUBSTR(Start_Date, 4, 2);
+
+-- ==============================
+-- PIVOTING
+-- ==============================
+
+-- Get the total actual cost for each cost category in a pivoted manner
+SELECT Project_Name, 
+       SUM(CASE WHEN Cost_Category = 'Labor' THEN Actual_Cost ELSE 0 END) AS Labor_Cost,
+       SUM(CASE WHEN Cost_Category = 'Materials' THEN Actual_Cost ELSE 0 END) AS Materials_Cost
+       -- ... other cost categories as needed
+FROM cost_estimation 
+GROUP BY Project_Name;
+
+-- ==============================
+-- STRING OPERATIONS
+-- ==============================
+
+-- Convert project names to uppercase
+UPDATE cost_estimation 
+SET Project_Name = UPPER(Project_Name);
+
+-- Extract specific substrings
+SELECT SUBSTR(Item, 1, INSTR(Item, ' (') - 1) AS Material_Type 
+FROM cost_estimation 
+WHERE Cost_Category = 'Materials';
+
+-- ==============================
+-- DATE OPERATIONS
+-- ==============================
+
+-- Calculate the duration of each project
+SELECT Project_Name, 
+       (SUBSTR(End_Date, 1, 2) - SUBSTR(Start_Date, 1, 2)) + 1 AS Project_Duration_Days 
+FROM cost_estimation;
